@@ -15,6 +15,11 @@ import { Route as AcessoRouteImport } from './routes/acesso'
 import { Route as MinhaContaRouteImport } from './routes/minha-conta'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as AuthenticatedAdminClientesRouteImport } from './routes/_authenticated/admin.clientes'
+import { Route as AuthenticatedAdminEsperaRouteImport } from './routes/_authenticated/admin.espera'
+import { Route as AuthenticatedAdminHorariosRouteImport } from './routes/_authenticated/admin.horarios'
+import { Route as AuthenticatedAdminMetricasRouteImport } from './routes/_authenticated/admin.metricas'
+import { Route as AuthenticatedAdminServicosRouteImport } from './routes/_authenticated/admin.servicos'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -45,18 +50,58 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminClientesRoute =
+  AuthenticatedAdminClientesRouteImport.update({
+    id: '/clientes',
+    path: '/clientes',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminEsperaRoute =
+  AuthenticatedAdminEsperaRouteImport.update({
+    id: '/espera',
+    path: '/espera',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminHorariosRoute =
+  AuthenticatedAdminHorariosRouteImport.update({
+    id: '/horarios',
+    path: '/horarios',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMetricasRoute =
+  AuthenticatedAdminMetricasRouteImport.update({
+    id: '/metricas',
+    path: '/metricas',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminServicosRoute =
+  AuthenticatedAdminServicosRouteImport.update({
+    id: '/servicos',
+    path: '/servicos',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/acesso': typeof AcessoRoute
   '/minha-conta': typeof MinhaContaRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/admin/clientes': typeof AuthenticatedAdminClientesRoute
+  '/admin/espera': typeof AuthenticatedAdminEsperaRoute
+  '/admin/horarios': typeof AuthenticatedAdminHorariosRoute
+  '/admin/metricas': typeof AuthenticatedAdminMetricasRoute
+  '/admin/servicos': typeof AuthenticatedAdminServicosRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/acesso': typeof AcessoRoute
   '/minha-conta': typeof MinhaContaRoute
+  '/admin/clientes': typeof AuthenticatedAdminClientesRoute
+  '/admin/espera': typeof AuthenticatedAdminEsperaRoute
+  '/admin/horarios': typeof AuthenticatedAdminHorariosRoute
+  '/admin/metricas': typeof AuthenticatedAdminMetricasRoute
+  '/admin/servicos': typeof AuthenticatedAdminServicosRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesById {
@@ -66,13 +111,37 @@ export interface FileRoutesById {
   '/acesso': typeof AcessoRoute
   '/minha-conta': typeof MinhaContaRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/admin/clientes': typeof AuthenticatedAdminClientesRoute
+  '/_authenticated/admin/espera': typeof AuthenticatedAdminEsperaRoute
+  '/_authenticated/admin/horarios': typeof AuthenticatedAdminHorariosRoute
+  '/_authenticated/admin/metricas': typeof AuthenticatedAdminMetricasRoute
+  '/_authenticated/admin/servicos': typeof AuthenticatedAdminServicosRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/acesso' | '/minha-conta' | '/admin' | '/admin/'
+  fullPaths:
+    | '/'
+    | '/acesso'
+    | '/minha-conta'
+    | '/admin'
+    | '/admin/clientes'
+    | '/admin/espera'
+    | '/admin/horarios'
+    | '/admin/metricas'
+    | '/admin/servicos'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/acesso' | '/minha-conta' | '/admin'
+  to:
+    | '/'
+    | '/acesso'
+    | '/minha-conta'
+    | '/admin/clientes'
+    | '/admin/espera'
+    | '/admin/horarios'
+    | '/admin/metricas'
+    | '/admin/servicos'
+    | '/admin'
   id:
     | '__root__'
     | '/'
@@ -80,6 +149,11 @@ export interface FileRouteTypes {
     | '/acesso'
     | '/minha-conta'
     | '/_authenticated/admin'
+    | '/_authenticated/admin/clientes'
+    | '/_authenticated/admin/espera'
+    | '/_authenticated/admin/horarios'
+    | '/_authenticated/admin/metricas'
+    | '/_authenticated/admin/servicos'
     | '/_authenticated/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -134,14 +208,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/clientes': {
+      id: '/_authenticated/admin/clientes'
+      path: '/clientes'
+      fullPath: '/admin/clientes'
+      preLoaderRoute: typeof AuthenticatedAdminClientesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/espera': {
+      id: '/_authenticated/admin/espera'
+      path: '/espera'
+      fullPath: '/admin/espera'
+      preLoaderRoute: typeof AuthenticatedAdminEsperaRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/horarios': {
+      id: '/_authenticated/admin/horarios'
+      path: '/horarios'
+      fullPath: '/admin/horarios'
+      preLoaderRoute: typeof AuthenticatedAdminHorariosRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/metricas': {
+      id: '/_authenticated/admin/metricas'
+      path: '/metricas'
+      fullPath: '/admin/metricas'
+      preLoaderRoute: typeof AuthenticatedAdminMetricasRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/servicos': {
+      id: '/_authenticated/admin/servicos'
+      path: '/servicos'
+      fullPath: '/admin/servicos'
+      preLoaderRoute: typeof AuthenticatedAdminServicosRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminClientesRoute: typeof AuthenticatedAdminClientesRoute
+  AuthenticatedAdminEsperaRoute: typeof AuthenticatedAdminEsperaRoute
+  AuthenticatedAdminHorariosRoute: typeof AuthenticatedAdminHorariosRoute
+  AuthenticatedAdminMetricasRoute: typeof AuthenticatedAdminMetricasRoute
+  AuthenticatedAdminServicosRoute: typeof AuthenticatedAdminServicosRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminClientesRoute: AuthenticatedAdminClientesRoute,
+  AuthenticatedAdminEsperaRoute: AuthenticatedAdminEsperaRoute,
+  AuthenticatedAdminHorariosRoute: AuthenticatedAdminHorariosRoute,
+  AuthenticatedAdminMetricasRoute: AuthenticatedAdminMetricasRoute,
+  AuthenticatedAdminServicosRoute: AuthenticatedAdminServicosRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
 
