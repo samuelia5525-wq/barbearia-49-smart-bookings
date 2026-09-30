@@ -9,7 +9,7 @@ export const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Se
 
 export function toMin(t: string) {
   const [h, m] = t.split(":").map(Number);
-  return h * 60 + (m || 0);
+  return (h ?? 0) * 60 + (m || 0);
 }
 export function hhmm(min: number) {
   return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
@@ -106,7 +106,7 @@ export function computeSlots(opts: {
   const open = toMin(hours.open_time);
   const close = toMin(hours.close_time);
   const closed = closedIntervals(hours, blocks);
-  const busyMs = busy.map((b) => [new Date(b.starts_at).getTime(), new Date(b.ends_at).getTime()]);
+  const busyMs: [number, number][] = busy.map((b) => [new Date(b.starts_at).getTime(), new Date(b.ends_at).getTime()]);
   const now = (opts.nowMs ?? Date.now()) + 30 * 60_000; // antecedência mínima 30min
   const slots: string[] = [];
   for (let m = open; m + duration <= close; m += SLOT_STEP) {
