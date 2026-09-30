@@ -37,7 +37,7 @@ function AdminLayout() {
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
-    navigate({ to: "/admin/login", replace: true });
+    navigate({ to: "/acesso", replace: true });
   };
 
   if (role.isLoading) return <div className="grid min-h-screen place-items-center text-muted-foreground">Carregando…</div>;
