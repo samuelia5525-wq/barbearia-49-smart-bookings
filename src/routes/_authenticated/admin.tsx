@@ -14,10 +14,6 @@ export const Route = createFileRoute("/_authenticated/admin")({
 
 const NAV = [
   { to: "/admin", label: "Agenda", icon: CalendarDays, exact: true },
-  { to: "/admin/dashboard", label: "Métricas", icon: BarChart3 },
-  { to: "/admin/servicos", label: "Serviços", icon: Scissors },
-  { to: "/admin/horarios", label: "Horários", icon: Clock },
-  { to: "/admin/clientes", label: "Clientes", icon: Users },
 ] as const;
 
 function AdminLayout() {
