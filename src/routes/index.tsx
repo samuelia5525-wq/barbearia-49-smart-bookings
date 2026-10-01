@@ -185,6 +185,16 @@ function BookingPage() {
                 <span>Meus Cortes</span>
               </Link>
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="h-9 rounded-full border border-white/5 bg-white/[0.02] text-xs font-semibold text-zinc-400 hover:bg-white/[0.08] hover:text-primary transition-all"
+            >
+              <Link to="/admin">
+                <span>Painel Admin</span>
+              </Link>
+            </Button>
           </div>
         </div>
       </header>
@@ -296,76 +306,121 @@ function BookingPage() {
             )}
 
             {/* STEP 1: Catálogo de Serviços */}
-            {step === 1 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-display text-xl sm:text-2xl font-bold text-white">
-                    Serviços Disponíveis
-                  </h2>
-                  <span className="text-xs text-zinc-500 font-medium">
-                    {services.length} opções
-                  </span>
-                </div>
+            {step === 1 && (() => {
+              const groups = [
+                {
+                  label: "Cortes e Combos",
+                  filter: (s: typeof services[0]) => s.id.startsWith("c1") || s.name.toLowerCase().startsWith("corte") || s.name.toLowerCase().startsWith("combo"),
+                },
+                {
+                  label: "Serviços Individuais",
+                  filter: (s: typeof services[0]) => s.id.startsWith("s2") || (!s.name.toLowerCase().startsWith("corte") && !s.name.toLowerCase().startsWith("combo") && !s.name.toLowerCase().startsWith("pacote")),
+                },
+                {
+                  label: "Pacotes Mensais",
+                  filter: (s: typeof services[0]) => s.id.startsWith("p3") || s.name.toLowerCase().startsWith("pacote"),
+                },
+              ];
 
-                <div className="grid gap-3.5 sm:grid-cols-2">
-                  {services.map((svc) => (
-                    <button
-                      key={svc.id}
-                      onClick={() => {
-                        setSelectedService(svc);
-                        setSelectedTime(null);
-                        goToStep(2);
-                      }}
-                      className={cn(
-                        "group relative flex overflow-hidden rounded-2xl border text-left transition-all duration-200 active:scale-[0.98]",
-                        selectedService?.id === svc.id
-                          ? "border-primary bg-card/90 ring-2 ring-primary/40 shadow-xl shadow-amber-500/10"
-                          : "border-white/[0.08] bg-[#12141C]/80 hover:border-amber-500/50 hover:bg-[#161922]"
-                      )}
-                    >
-                      {/* Thumbnail Image */}
-                      <div className="relative aspect-square w-28 shrink-0 overflow-hidden bg-black/40 sm:w-36">
-                        <img
-                          src={serviceImage(svc.name, svc.image_url)}
-                          alt={svc.name}
-                          loading="lazy"
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                        <span className="absolute bottom-2 left-2 rounded-lg bg-black/80 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-zinc-200 flex items-center gap-1 border border-white/10">
-                          <Clock className="h-3 w-3 text-primary" />
-                          {svc.duration_min}m
-                        </span>
+              // Build ordered groups from actual services
+              const cortes = services.filter(s => s.name.toLowerCase().startsWith("corte") || s.name.toLowerCase().startsWith("combo"));
+              const pacotes = services.filter(s => s.name.toLowerCase().startsWith("pacote"));
+              const individuais = services.filter(s =>
+                !s.name.toLowerCase().startsWith("corte") &&
+                !s.name.toLowerCase().startsWith("combo") &&
+                !s.name.toLowerCase().startsWith("pacote")
+              );
+              const allGroups = [
+                { label: "✂️ Cortes e Combos", items: cortes },
+                { label: "💈 Serviços Individuais", items: individuais },
+                { label: "📅 Pacotes Mensais", items: pacotes },
+              ].filter(g => g.items.length > 0);
+
+              return (
+                <div className="space-y-8">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-display text-xl sm:text-2xl font-bold text-white">
+                      Serviços Disponíveis
+                    </h2>
+                    <span className="text-xs text-zinc-500 font-medium">
+                      {services.length} opções
+                    </span>
+                  </div>
+
+                  {allGroups.map((group) => (
+                    <div key={group.label} className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-xs font-extrabold uppercase tracking-widest text-amber-400">
+                          {group.label}
+                        </h3>
+                        <div className="flex-1 h-px bg-amber-500/20" />
                       </div>
 
-                      {/* Content */}
-                      <div className="flex flex-1 flex-col justify-between p-4">
-                        <div>
-                          <h3 className="font-display font-bold text-base text-white group-hover:text-amber-400 transition leading-snug">
-                            {svc.name}
-                          </h3>
-                          {svc.description && (
-                            <p className="mt-1 text-xs text-zinc-400 line-clamp-2 leading-relaxed">
-                              {svc.description}
-                            </p>
-                          )}
-                        </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {group.items.map((svc) => (
+                          <button
+                            key={svc.id}
+                            onClick={() => {
+                              setSelectedService(svc);
+                              setSelectedTime(null);
+                              goToStep(2);
+                            }}
+                            className={cn(
+                              "group relative flex overflow-hidden rounded-2xl border text-left transition-all duration-200 active:scale-[0.98]",
+                              selectedService?.id === svc.id
+                                ? "border-primary bg-card/90 ring-2 ring-primary/40 shadow-xl shadow-amber-500/10"
+                                : "border-white/[0.08] bg-[#12141C]/80 hover:border-amber-500/50 hover:bg-[#161922]"
+                            )}
+                          >
+                            {/* Thumbnail Image */}
+                            <div className="relative aspect-square w-24 shrink-0 overflow-hidden bg-black/40 sm:w-28">
+                              <img
+                                src={serviceImage(svc.name, svc.image_url)}
+                                alt={svc.name}
+                                loading="lazy"
+                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                              <span className="absolute bottom-2 left-2 rounded-lg bg-black/80 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-zinc-200 flex items-center gap-1 border border-white/10">
+                                <Clock className="h-3 w-3 text-primary" />
+                                {svc.duration_min >= 60
+                                  ? `${Math.floor(svc.duration_min / 60)}h${svc.duration_min % 60 ? (svc.duration_min % 60) + "m" : ""}`
+                                  : `${svc.duration_min}m`}
+                              </span>
+                            </div>
 
-                        <div className="mt-4 flex items-center justify-between pt-1 border-t border-white/[0.06]">
-                          <span className="font-display text-lg font-black gold-gradient-text">
-                            {formatBRL(svc.price)}
-                          </span>
+                            {/* Content */}
+                            <div className="flex flex-1 flex-col justify-between p-3.5">
+                              <div>
+                                <h3 className="font-display font-bold text-sm text-white group-hover:text-amber-400 transition leading-snug">
+                                  {svc.name}
+                                </h3>
+                                {svc.description && (
+                                  <p className="mt-1 text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
+                                    {svc.description}
+                                  </p>
+                                )}
+                              </div>
 
-                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-3 py-1 text-[11px] font-bold text-primary group-hover:bg-primary group-hover:text-black transition-all">
-                            Agendar <ChevronRight className="h-3 w-3" />
-                          </span>
-                        </div>
+                              <div className="mt-3 flex items-center justify-between pt-1 border-t border-white/[0.06]">
+                                <span className="font-display text-base font-black gold-gradient-text">
+                                  {svc.price === 0 ? "A consultar" : formatBRL(svc.price)}
+                                </span>
+
+                                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-1 text-[10px] font-bold text-primary group-hover:bg-primary group-hover:text-black transition-all">
+                                  Agendar <ChevronRight className="h-3 w-3" />
+                                </span>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
-              </div>
-            )}
+              );
+            })()}
+
 
             {/* STEP 2: Seleção de Data */}
             {step === 2 && selectedService && (
@@ -458,6 +513,22 @@ function BookingPage() {
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="mt-16 border-t border-white/[0.06] py-8 text-center text-xs text-zinc-500">
+        <div className="mx-auto max-w-4xl px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p>© {new Date().getFullYear()} Barbearia 49 · Todos os direitos reservados.</p>
+          <div className="flex items-center gap-4">
+            <Link to="/minha-conta" className="hover:text-primary transition-colors">
+              Meus Agendamentos
+            </Link>
+            <span className="text-zinc-700">·</span>
+            <Link to="/admin" className="hover:text-primary transition-colors">
+              Painel Administrativo (Dono)
+            </Link>
+          </div>
+        </div>
+      </footer>
 
       {/* Floating Bottom Navigation Bar (Mobile) */}
       {!bookedResult && selectedService && step < 4 && (
@@ -798,6 +869,21 @@ function BookingFormView({
           phone: res.client.phone,
           nickname: res.client.nickname,
         });
+
+        // Broadcast to admin dashboard
+        try {
+          const bc = new BroadcastChannel("barbearia49-sync");
+          bc.postMessage({
+            type: "NEW_APPOINTMENT",
+            client: (res.client.nickname || res.client.name).trim(),
+            service: res.appointment.service,
+            time: `${date} ${time}`,
+          });
+          bc.close();
+        } catch {
+          // ignore
+        }
+
         toast.success("Agendamento realizado com sucesso!");
         onBooked(res);
         return;

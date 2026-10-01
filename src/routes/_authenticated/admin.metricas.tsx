@@ -56,7 +56,7 @@ function MetricasPage() {
       if (error) throw error;
       return data ?? [];
     },
-    refetchInterval: 60_000,
+    refetchInterval: 15_000,
   });
 
   // Fetch all clients

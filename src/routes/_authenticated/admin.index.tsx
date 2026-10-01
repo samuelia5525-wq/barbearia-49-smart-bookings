@@ -103,8 +103,54 @@ function AgendaPage() {
   const q = useQuery({
     queryKey: ["admin-appts", from, days],
     queryFn: () => fetchAppointments(isoAt(from, 0), isoAt(addDays(from, days), 0)),
-    refetchInterval: 20_000,
+    refetchInterval: 10_000,
   });
+
+  // Real-time synchronization with Supabase and active tabs
+  useEffect(() => {
+    // 1. Supabase Postgres Realtime Subscription
+    const channel = supabase
+      .channel("admin-realtime-appointments")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "appointments" },
+        (payload) => {
+          qc.invalidateQueries({ queryKey: ["admin-appts"] });
+          if (payload.eventType === "INSERT") {
+            toast.success("Novo agendamento recebido em tempo real!");
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "blocks" },
+        () => {
+          qc.invalidateQueries({ queryKey: ["admin-blocks"] });
+        }
+      )
+      .subscribe();
+
+    // 2. Broadcast Channel for instant cross-tab sync
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel("barbearia49-sync");
+      bc.onmessage = (ev) => {
+        if (ev.data?.type === "NEW_APPOINTMENT") {
+          qc.invalidateQueries({ queryKey: ["admin-appts"] });
+          toast.success(
+            `Novo agendamento: ${ev.data.client || "Cliente"} - ${ev.data.service || "Corte"}`
+          );
+        }
+      };
+    } catch {
+      // ignore if BroadcastChannel is unsupported
+    }
+
+    return () => {
+      supabase.removeChannel(channel);
+      bc?.close();
+    };
+  }, [qc]);
 
   const blocks = useQuery({
     queryKey: ["admin-blocks", from, days],
