@@ -2,22 +2,36 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated")({
-  ssr: false,
   beforeLoad: async () => {
-    const isLocalOwner =
-      typeof window !== "undefined" &&
-      localStorage.getItem("barbearia49_owner_session") === "true";
-
-    const { data } = await supabase.auth.getUser();
-    if (!data?.user && !isLocalOwner) {
-      throw redirect({ to: "/acesso" });
+    // Check local storage session (client-side)
+    let isLocalOwner = false;
+    if (typeof window !== "undefined") {
+      isLocalOwner = localStorage.getItem("barbearia49_owner_session") === "true";
     }
-    return {
-      user: data?.user ?? {
-        id: "master-owner",
-        email: "samuel.psa777@gmail.com",
-      },
-    };
+
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) {
+        return { user: data.user };
+      }
+    } catch {
+      // ignore
+    }
+
+    if (isLocalOwner) {
+      return {
+        user: {
+          id: "master-owner",
+          email: "samuel.psa777@gmail.com",
+        },
+      };
+    }
+
+    // If not authenticated, redirect to /acesso
+    throw redirect({
+      to: "/acesso",
+    });
   },
   component: () => <Outlet />,
 });
+
