@@ -212,8 +212,8 @@ function BookingPage() {
             </div>
 
             <h1 className="font-display text-3xl font-extrabold tracking-tight sm:text-5xl text-white leading-[1.15]">
-              O melhor corte da sua vida com o{" "}
-              <span className="gold-gradient-text">Isac</span>.
+              Todo o cuidado do{" "}
+              <span className="gold-gradient-text">Isac</span> para manter seu estilo.
             </h1>
 
             <p className="mt-3 text-sm sm:text-base text-zinc-400 max-w-xl leading-relaxed">
