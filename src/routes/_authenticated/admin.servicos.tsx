@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Edit2, Trash2, Check, X, Clock, Scissors, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getAdminServicesFn, saveAdminServiceFn, deleteAdminServiceFn } from "@/lib/admin.functions";
 import { formatBRL } from "@/lib/time";
 import { serviceImage } from "@/components/site/services";
 import { Button } from "@/components/ui/button";
@@ -55,13 +56,12 @@ function ServicosPage() {
   const { data: services = [], isLoading } = useQuery({
     queryKey: ["admin-services"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("services")
-        .select("*")
-        .order("sort", { ascending: true })
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return (data ?? []).map((s) => ({ ...s, price: Number(s.price) })) as Service[];
+      try {
+        const res = await getAdminServicesFn();
+        return (res ?? []).map((s) => ({ ...s, price: Number(s.price) })) as Service[];
+      } catch {
+        return [] as Service[];
+      }
     },
   });
 
@@ -97,37 +97,25 @@ function ServicosPage() {
 
     setBusy(true);
     try {
-      if (editingService) {
-        const { error } = await supabase
-          .from("services")
-          .update({
-            name: name.trim(),
-            description: description.trim() || null,
-            price: p,
-            duration_min: d,
-            image_url: imageUrl.trim() || null,
-            active,
-          })
-          .eq("id", editingService.id);
-        if (error) throw error;
-        toast.success("Serviço atualizado com sucesso!");
-      } else {
-        const sortOrder = services.length + 1;
-        const { error } = await supabase.from("services").insert({
+      const res = await saveAdminServiceFn({
+        data: {
+          id: editingService ? editingService.id : undefined,
           name: name.trim(),
           description: description.trim() || null,
           price: p,
           duration_min: d,
           image_url: imageUrl.trim() || null,
           active,
-          sort: sortOrder,
-        });
-        if (error) throw error;
-        toast.success("Serviço cadastrado com sucesso!");
-      }
+          sort: editingService ? editingService.sort : services.length + 1,
+        },
+      });
+      if (!res.ok) throw new Error("Erro ao salvar serviço");
+
+      toast.success(editingService ? "Serviço atualizado com sucesso!" : "Serviço cadastrado com sucesso!");
       setModalOpen(false);
       qc.invalidateQueries({ queryKey: ["admin-services"] });
       qc.invalidateQueries({ queryKey: ["public-services"] });
+      qc.invalidateQueries({ queryKey: ["public-services-list"] });
     } catch (err: any) {
       toast.error(err?.message || "Erro ao salvar serviço.");
     } finally {
@@ -137,28 +125,42 @@ function ServicosPage() {
 
   const toggleStatus = async (s: Service) => {
     const nextStatus = !s.active;
-    const { error } = await supabase
-      .from("services")
-      .update({ active: nextStatus })
-      .eq("id", s.id);
-    if (error) return toast.error("Erro ao alterar status.");
-    toast.success(nextStatus ? "Serviço ativado na agenda." : "Serviço pausado.");
-    qc.invalidateQueries({ queryKey: ["admin-services"] });
-    qc.invalidateQueries({ queryKey: ["public-services"] });
+    try {
+      const res = await saveAdminServiceFn({
+        data: {
+          id: s.id,
+          name: s.name,
+          description: s.description,
+          price: s.price,
+          duration_min: s.duration_min,
+          image_url: s.image_url,
+          active: nextStatus,
+          sort: s.sort,
+        },
+      });
+      if (!res.ok) throw new Error("Erro");
+      toast.success(nextStatus ? "Serviço ativado na agenda." : "Serviço pausado.");
+      qc.invalidateQueries({ queryKey: ["admin-services"] });
+      qc.invalidateQueries({ queryKey: ["public-services"] });
+      qc.invalidateQueries({ queryKey: ["public-services-list"] });
+    } catch {
+      toast.error("Erro ao alterar status.");
+    }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     setBusy(true);
     try {
-      const { error } = await supabase.from("services").delete().eq("id", deleteId);
-      if (error) throw error;
+      const res = await deleteAdminServiceFn({ data: { id: deleteId } });
+      if (!res.ok) throw new Error("Erro ao excluir");
       toast.success("Serviço removido.");
       setDeleteId(null);
       qc.invalidateQueries({ queryKey: ["admin-services"] });
       qc.invalidateQueries({ queryKey: ["public-services"] });
+      qc.invalidateQueries({ queryKey: ["public-services-list"] });
     } catch (err: any) {
-      toast.error("Não foi possível excluir (pode haver agendamentos vinculados). Em vez disso, desative o serviço.");
+      toast.error("Não foi possível excluir o serviço.");
     } finally {
       setBusy(false);
     }

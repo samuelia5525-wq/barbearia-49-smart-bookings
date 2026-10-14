@@ -27,6 +27,7 @@ import {
   Scissors,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getAdminMetricsFn } from "@/lib/admin.functions";
 import { formatBRL, formatDateShort, formatPhone, spParts, todaySP, waLink } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,54 +46,23 @@ const COLORS = ["#d97706", "#f59e0b", "#fbbf24", "#fcd34d", "#78716c", "#a8a29e"
 function MetricasPage() {
   const [period, setPeriod] = useState<Period>("30d");
 
-  // Fetch all appointments
-  const { data: appointments = [], isLoading: loadingAppts } = useQuery({
-    queryKey: ["admin-metrics-appointments"],
+  // Fetch all metrics data from unified server
+  const { data: metricsData, isLoading: loadingAppts } = useQuery({
+    queryKey: ["admin-metrics-data"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("appointments")
-        .select("id,service_name,starts_at,ends_at,status,price,is_free,client_id,created_at,profiles(name,nickname,phone)")
-        .order("starts_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      try {
+        return await getAdminMetricsFn();
+      } catch {
+        return { appointments: [], clients: [], ratings: [], businessHours: [] };
+      }
     },
     refetchInterval: 15_000,
   });
 
-  // Fetch all clients
-  const { data: clients = [] } = useQuery({
-    queryKey: ["admin-metrics-clients"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id,name,nickname,phone,created_at")
-        .eq("role", "client");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  // Fetch ratings
-  const { data: ratings = [] } = useQuery({
-    queryKey: ["admin-metrics-ratings"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ratings")
-        .select("id,stars,comment,created_at,profiles(name,nickname)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  // Fetch business hours for occupancy rate calculation
-  const { data: businessHours = [] } = useQuery({
-    queryKey: ["admin-metrics-hours"],
-    queryFn: async () => {
-      const { data } = await supabase.from("business_hours").select("*");
-      return data ?? [];
-    },
-  });
+  const appointments = metricsData?.appointments ?? [];
+  const clients = metricsData?.clients ?? [];
+  const ratings = metricsData?.ratings ?? [];
+  const businessHours = metricsData?.businessHours ?? [];
 
   // Process data based on period
   const stats = useMemo(() => {

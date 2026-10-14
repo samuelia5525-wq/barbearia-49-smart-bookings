@@ -3,7 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Clock, Calendar, Plus, Trash2, ShieldAlert, Check, CalendarX } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  getAdminBusinessHoursFn,
+  updateAdminBusinessHourFn,
+  getAdminBlocksFn,
+  addAdminBlockFn,
+  deleteAdminBlockFn,
+} from "@/lib/admin.functions";
 import { formatDateLong, formatDateShort, todaySP, WEEKDAYS } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,12 +63,11 @@ function HorariosPage() {
   const { data: hours = [], isLoading: loadingHours } = useQuery({
     queryKey: ["admin-business-hours"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("business_hours")
-        .select("*")
-        .order("weekday", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as BusinessHour[];
+      try {
+        return (await getAdminBusinessHoursFn()) as BusinessHour[];
+      } catch {
+        return [] as BusinessHour[];
+      }
     },
   });
 
@@ -70,24 +75,21 @@ function HorariosPage() {
   const { data: blocks = [], isLoading: loadingBlocks } = useQuery({
     queryKey: ["admin-blocks-list"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("blocks")
-        .select("*")
-        .gte("date", todaySP())
-        .order("date", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as Block[];
+      try {
+        return (await getAdminBlocksFn({ data: { from: todaySP() } })) as Block[];
+      } catch {
+        return [] as Block[];
+      }
     },
   });
 
   // Update a single weekday's hours
   const updateWeekday = async (weekday: number, updates: Partial<BusinessHour>) => {
     try {
-      const { error } = await supabase
-        .from("business_hours")
-        .update(updates)
-        .eq("weekday", weekday);
-      if (error) throw error;
+      const res = await updateAdminBusinessHourFn({
+        data: { weekday, updates },
+      });
+      if (!res.ok) throw new Error(res.error);
       toast.success("Horário atualizado.");
       qc.invalidateQueries({ queryKey: ["admin-business-hours"] });
       qc.invalidateQueries({ queryKey: ["public-hours"] });
@@ -104,13 +106,15 @@ function HorariosPage() {
 
     setBusy(true);
     try {
-      const { error } = await supabase.from("blocks").insert({
-        date: blockDate,
-        start_time: isFullDay ? null : blockStart,
-        end_time: isFullDay ? null : blockEnd,
-        reason: blockReason.trim(),
+      const res = await addAdminBlockFn({
+        data: {
+          date: blockDate,
+          start_time: isFullDay ? null : blockStart,
+          end_time: isFullDay ? null : blockEnd,
+          reason: blockReason.trim(),
+        },
       });
-      if (error) throw error;
+      if (!res.ok) throw new Error("Erro ao adicionar");
       toast.success("Bloqueio adicionado à agenda.");
       setBlockModalOpen(false);
       qc.invalidateQueries({ queryKey: ["admin-blocks-list"] });
@@ -125,8 +129,8 @@ function HorariosPage() {
   // Delete a block
   const handleDeleteBlock = async (id: string) => {
     try {
-      const { error } = await supabase.from("blocks").delete().eq("id", id);
-      if (error) throw error;
+      const res = await deleteAdminBlockFn({ data: { id } });
+      if (!res.ok) throw new Error("Erro ao remover");
       toast.success("Bloqueio removido.");
       qc.invalidateQueries({ queryKey: ["admin-blocks-list"] });
       qc.invalidateQueries({ queryKey: ["admin-blocks"] });

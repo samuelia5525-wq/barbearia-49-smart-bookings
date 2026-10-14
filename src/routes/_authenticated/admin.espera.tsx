@@ -13,6 +13,11 @@ import {
   Calendar,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  getAdminWaitlistFn,
+  updateAdminWaitlistStatusFn,
+  deleteAdminWaitlistFn,
+} from "@/lib/admin.functions";
 import { formatDateLong, formatDateShort, formatPhone, spParts, todaySP, waLink } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,22 +53,19 @@ function EsperaPage() {
   const { data: waitlist = [], isLoading } = useQuery({
     queryKey: ["admin-waitlist-full"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("waitlist")
-        .select("id,client_id,service_id,date,status,created_at,profiles(name,nickname,phone),services(name,duration_min,price)")
-        .gte("date", todaySP())
-        .order("date", { ascending: true })
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as WaitlistEntry[];
+      try {
+        return (await getAdminWaitlistFn()) as WaitlistEntry[];
+      } catch {
+        return [] as WaitlistEntry[];
+      }
     },
-    refetchInterval: 20_000,
+    refetchInterval: 15_000,
   });
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      const { error } = await supabase.from("waitlist").update({ status }).eq("id", id);
-      if (error) throw error;
+      const res = await updateAdminWaitlistStatusFn({ data: { id, status: status as any } });
+      if (!res.ok) throw new Error("Erro");
       toast.success("Status atualizado!");
       qc.invalidateQueries({ queryKey: ["admin-waitlist-full"] });
     } catch {
@@ -73,8 +75,8 @@ function EsperaPage() {
 
   const removeEntry = async (id: string) => {
     try {
-      const { error } = await supabase.from("waitlist").delete().eq("id", id);
-      if (error) throw error;
+      const res = await deleteAdminWaitlistFn({ data: { id } });
+      if (!res.ok) throw new Error("Erro");
       toast.success("Removido da fila de espera.");
       qc.invalidateQueries({ queryKey: ["admin-waitlist-full"] });
     } catch {

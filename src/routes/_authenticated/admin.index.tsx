@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAppointments, STATUS_LABEL, type AdminAppt } from "@/lib/admin-data";
+import { updateAdminAppointmentFn, createAdminAppointmentFn, getAdminBlocksFn } from "@/lib/admin.functions";
+import { getServicesList } from "@/lib/barber-store";
 import {
   addDays,
   formatBRL,
@@ -154,21 +156,18 @@ function AgendaPage() {
 
   const blocks = useQuery({
     queryKey: ["admin-blocks", from, days],
-    queryFn: async () =>
-      (await supabase.from("blocks").select("*").gte("date", from).lt("date", addDays(from, days)))
-        .data ?? [],
+    queryFn: async () => {
+      try {
+        return (await getAdminBlocksFn({ data: { from, to: addDays(from, days) } })) ?? [];
+      } catch {
+        return [];
+      }
+    },
   });
 
   const servicesQuery = useQuery({
     queryKey: ["admin-active-services"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("services")
-        .select("id,name,price,duration_min")
-        .eq("active", true)
-        .order("sort");
-      return data ?? [];
-    },
+    queryFn: getServicesList,
   });
 
   const byDate = useMemo(() => {
@@ -202,18 +201,27 @@ function AgendaPage() {
   const todayList = (byDate[today] ?? []).filter((a) => a.status === "confirmed");
 
   const update = async (a: AdminAppt, status: string) => {
-    const { error } = await supabase.from("appointments").update({ status }).eq("id", a.id);
-    if (error) return toast.error("Não foi possível atualizar.");
-    if (status === "cancelled") {
-      await supabase
-        .from("waitlist")
-        .update({ status: "notified" })
-        .eq("date", spParts(a.starts_at).date)
-        .eq("status", "waiting");
+    try {
+      const res = await updateAdminAppointmentFn({
+        data: { id: a.id, status: status as any },
+      });
+      if (!res.ok) return toast.error(res.error || "Não foi possível atualizar.");
+
+      // Broadcast update
+      try {
+        const bc = new BroadcastChannel("barbearia49-sync");
+        bc.postMessage({ type: "APPOINTMENT_UPDATED", id: a.id, status });
+        bc.close();
+      } catch {
+        // ignore
+      }
+
+      toast.success(STATUS_LABEL[status] || "Atualizado!");
+      setSel(null);
+      qc.invalidateQueries({ queryKey: ["admin-appts"] });
+    } catch {
+      toast.error("Não foi possível atualizar.");
     }
-    toast.success(STATUS_LABEL[status] || "Atualizado!");
-    setSel(null);
-    qc.invalidateQueries({ queryKey: ["admin-appts"] });
   };
 
   const handleManualSubmit = async (e: React.FormEvent) => {
@@ -227,46 +235,31 @@ function AgendaPage() {
 
     setSavingManual(true);
     try {
-      // Find or create profile
-      let clientId: string;
-      const { data: existingProf } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("phone", p)
-        .maybeSingle();
-
-      if (existingProf) {
-        clientId = existingProf.id;
-      } else {
-        const { data: newProf, error: profErr } = await supabase
-          .from("profiles")
-          .insert({
-            name: manualName.trim(),
-            phone: p,
-            role: "client",
-          })
-          .select("id")
-          .single();
-        if (profErr) throw profErr;
-        clientId = newProf.id;
-        await supabase.from("loyalty").insert({ client_id: clientId });
-      }
-
-      const startMin = toMin(manualTime);
-      const startsAt = isoAt(manualDate, startMin);
-      const endsAt = isoAt(manualDate, startMin + selectedService.duration_min);
-
-      const { error: apptErr } = await supabase.from("appointments").insert({
-        client_id: clientId,
-        service_id: selectedService.id,
-        service_name: selectedService.name,
-        starts_at: startsAt,
-        ends_at: endsAt,
-        price: selectedService.price,
-        status: "confirmed",
+      const res = await createAdminAppointmentFn({
+        data: {
+          name: manualName.trim(),
+          phone: p,
+          serviceId: selectedService.id,
+          date: manualDate,
+          time: manualTime,
+        },
       });
 
-      if (apptErr) throw apptErr;
+      if (!res.ok) throw new Error(res.error || "Erro ao agendar horário.");
+
+      // Broadcast to any active tabs
+      try {
+        const bc = new BroadcastChannel("barbearia49-sync");
+        bc.postMessage({
+          type: "NEW_APPOINTMENT",
+          client: manualName.trim(),
+          service: selectedService.name,
+          time: `${manualDate} ${manualTime}`,
+        });
+        bc.close();
+      } catch {
+        // ignore
+      }
 
       toast.success("Agendamento criado com sucesso!");
       setNewModalOpen(false);

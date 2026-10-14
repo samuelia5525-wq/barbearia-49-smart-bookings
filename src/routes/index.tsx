@@ -20,7 +20,7 @@ import {
   Zap,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { bookAppointment, getAvailability, joinWaitlist } from "@/lib/booking.functions";
+import { bookAppointment, getAvailability, getClientArea, joinWaitlist } from "@/lib/booking.functions";
 import {
   BARBER_WHATSAPP,
   formatBRL,
@@ -42,7 +42,7 @@ import {
   getBusinessHoursList,
   type ServiceItem,
 } from "@/lib/barber-store";
-import { serviceImage } from "@/components/site/services";
+import { serviceImage, logoEmblema } from "@/components/site/services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -154,9 +154,13 @@ function BookingPage() {
       <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#090A0F]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl gold-gradient-bg text-black font-display font-black text-xl shadow-lg shadow-amber-500/20">
-              49
-            </span>
+            <div className="relative flex items-center justify-center h-11 w-11 rounded-xl bg-black/80 border border-amber-500/40 shadow-lg shadow-amber-500/20 overflow-hidden p-1">
+              <img
+                src={logoEmblema}
+                alt="Logo Barbearia 49"
+                className="h-full w-full object-contain"
+              />
+            </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-display font-extrabold text-lg tracking-tight leading-none text-white">
@@ -206,7 +210,7 @@ function BookingPage() {
           <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-96 w-full max-w-2xl bg-amber-500/10 blur-[100px] rounded-full" />
 
           <div className="relative mx-auto max-w-4xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-bold text-amber-400 mb-4 shadow-sm">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-bold text-amber-400 shadow-sm">
               <Sparkles className="h-3.5 w-3.5 text-amber-400" />
               <span>Agendamento Online Instantâneo</span>
             </div>
@@ -794,6 +798,7 @@ function BookingFormView({
   onSlotTaken: () => void;
 }) {
   const book = useServerFn(bookAppointment);
+  const fetchClientArea = useServerFn(getClientArea);
   const [name, setName] = useState("");
   const [nickname, setNickname] = useState("");
   const [phone, setPhone] = useState("");
@@ -815,21 +820,10 @@ function BookingFormView({
     const norm = normalizePhone(p);
     if (norm.length >= 10) {
       try {
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("phone", norm)
-          .maybeSingle();
-        if (prof) {
-          const { data: loy } = await supabase
-            .from("loyalty")
-            .select("points")
-            .eq("client_id", prof.id)
-            .maybeSingle();
-          if (loy) {
-            setLoyaltyPoints(loy.points);
-            if (loy.points >= 10) setUseFree(true);
-          }
+        const area = await fetchClientArea({ data: { phone: norm } });
+        if (area && area.found && area.loyalty) {
+          setLoyaltyPoints(area.loyalty.points);
+          if (area.loyalty.points >= 10) setUseFree(true);
         }
       } catch {
         // ignore
@@ -888,55 +882,17 @@ function BookingFormView({
         onBooked(res);
         return;
       } else if (res && !res.ok) {
-        if (res.error?.includes("ocupado")) {
+        if (res.error?.includes("ocupado") || res.error?.includes("reservado")) {
+          toast.error(res.error);
           onSlotTaken();
           return;
         }
+        toast.error(res.error || "Não foi possível concluir o agendamento.");
+        return;
       }
-      
-      // Fallback confirmation
-      const fallbackRes = {
-        ok: true as const,
-        isNew: true,
-        client: { name: name.trim(), nickname: nickname.trim() || null, phone: p },
-        appointment: {
-          id: "appt-" + Date.now(),
-          service: service.name,
-          starts_at: `${date}T${time}:00-03:00`,
-          price: useFree ? 0 : Number(service.price),
-          duration: service.duration_min,
-          is_free: !!useFree,
-        },
-      };
-      saveClient({
-        name: name.trim(),
-        phone: p,
-        nickname: nickname.trim() || null,
-      });
-      toast.success("Agendamento realizado com sucesso!");
-      onBooked(fallbackRes);
-    } catch (err) {
-      console.warn("Server booking error, using instant fallback:", err);
-      const fallbackRes = {
-        ok: true as const,
-        isNew: true,
-        client: { name: name.trim(), nickname: nickname.trim() || null, phone: p },
-        appointment: {
-          id: "appt-" + Date.now(),
-          service: service.name,
-          starts_at: `${date}T${time}:00-03:00`,
-          price: useFree ? 0 : Number(service.price),
-          duration: service.duration_min,
-          is_free: !!useFree,
-        },
-      };
-      saveClient({
-        name: name.trim(),
-        phone: p,
-        nickname: nickname.trim() || null,
-      });
-      toast.success("Agendamento realizado com sucesso!");
-      onBooked(fallbackRes);
+    } catch (err: any) {
+      console.error("Booking error:", err);
+      toast.error(err?.message || "Erro ao conectar ao servidor. Tente novamente.");
     } finally {
       setBusy(false);
     }

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { logoBarbearia49 } from "@/components/site/services";
 
 export const Route = createFileRoute("/acesso")({
   head: () => ({
@@ -99,10 +100,12 @@ function AdminLogin() {
       <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#12141C] p-8 shadow-2xl">
         <form onSubmit={handleLogin}>
           <div className="mb-6 text-center">
-            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl gold-gradient-bg text-black font-display font-black text-xl shadow-lg shadow-amber-500/20">
-              <Scissors className="h-6 w-6 stroke-[2.5]" />
-            </span>
-            <h1 className="mt-4 font-display text-2xl font-bold text-white">
+            <img
+              src={logoBarbearia49}
+              alt="Barbearia 49"
+              className="mx-auto h-16 w-auto object-contain drop-shadow-[0_4px_16px_rgba(245,158,11,0.35)] mb-3"
+            />
+            <h1 className="mt-2 font-display text-2xl font-bold text-white">
               Painel Barbearia 49
             </h1>
             <p className="text-xs text-zinc-400 mt-1">

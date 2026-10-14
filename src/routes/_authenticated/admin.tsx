@@ -6,6 +6,7 @@ import { BarChart3, Bell, CalendarDays, Clock, ExternalLink, LogOut, Scissors, U
 import { supabase } from "@/integrations/supabase/client";
 import { claimOwner } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
+import { logoEmblema } from "@/components/site/services";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Painel — Barbearia 49" }, { name: "robots", content: "noindex" }] }),
@@ -81,7 +82,14 @@ function AdminLayout() {
     <div className="min-h-screen md:flex">
       <aside className="border-b border-border bg-sidebar md:sticky md:top-0 md:h-screen md:w-56 md:shrink-0 md:border-b-0 md:border-r">
         <div className="flex items-center justify-between px-4 py-4">
-          <Link to="/" className="font-display text-lg font-bold">Barbearia <span className="text-primary">49</span></Link>
+          <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold">
+            <img
+              src={logoEmblema}
+              alt="Barbearia 49"
+              className="h-7 w-7 object-contain"
+            />
+            <span>Barbearia <span className="text-primary">49</span></span>
+          </Link>
           <Button variant="ghost" size="icon" className="md:hidden" onClick={signOut}><LogOut className="h-4 w-4" /></Button>
         </div>
         <div className="px-3 pb-3 hidden md:block">

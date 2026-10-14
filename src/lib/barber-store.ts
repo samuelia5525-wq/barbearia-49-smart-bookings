@@ -97,7 +97,7 @@ export const DEFAULT_SERVICES: ServiceItem[] = [
   {
     id: "c1000000-0000-4000-8000-000000000009",
     name: "Corte + penteado",
-    description: "Corte completo com finalização e penteado personalizado.",
+    description: "Corte personalizado feito no seu estilo + penteado profissional com finalização impecável. Sobrancelha de cortesia inclusa!",
     price: 60,
     duration_min: 50,
     image_url: null,
@@ -237,6 +237,16 @@ export const DEFAULT_SERVICES: ServiceItem[] = [
   },
   // ── Pacotes Mensais ──────────────────────────────────────────────────────
   {
+    id: "p3000000-0000-4000-8000-000000000000",
+    name: "Pacote Promocional Pai e Filho",
+    description: "Pai: 2 Cortes + 4 Barbas + Sobrancelha de cortesia. Filho: 2 Cortes. Válido por 30 dias.",
+    price: 199,
+    duration_min: 60,
+    image_url: null,
+    active: true,
+    sort: 22.5,
+  },
+  {
     id: "p3000000-0000-4000-8000-000000000001",
     name: "Pacote mensal 1",
     description: "Pacote mensal com corte semanal — ideal para quem corta toda semana.",
@@ -301,21 +311,17 @@ export const DEFAULT_BUSINESS_HOURS: Hours[] = [
 /** Fetch services with bulletproof fallback */
 export async function getServicesList(): Promise<ServiceItem[]> {
   try {
-    const { data, error } = await supabase
-      .from("services")
-      .select("id,name,description,price,duration_min,image_url,active,sort")
-      .eq("active", true)
-      .order("sort");
-
-    if (!error && data && data.length > 0) {
-      return data.map((s) => ({
+    const { getAdminServicesFn } = await import("./admin.functions");
+    const list = await getAdminServicesFn({ data: { activeOnly: true } });
+    if (list && list.length > 0) {
+      return list.map((s) => ({
         ...s,
         description: s.description ?? "",
         price: Number(s.price),
       })) as ServiceItem[];
     }
-  } catch (err) {
-    console.warn("Using default services fallback:", err);
+  } catch {
+    // fallback
   }
 
   return DEFAULT_SERVICES;
@@ -324,9 +330,10 @@ export async function getServicesList(): Promise<ServiceItem[]> {
 /** Fetch business hours with fallback */
 export async function getBusinessHoursList(): Promise<Hours[]> {
   try {
-    const { data, error } = await supabase.from("business_hours").select("*").order("weekday");
-    if (!error && data && data.length > 0) {
-      return data as Hours[];
+    const { getAdminBusinessHoursFn } = await import("./admin.functions");
+    const list = await getAdminBusinessHoursFn();
+    if (list && list.length > 0) {
+      return list as Hours[];
     }
   } catch {
     // fallback

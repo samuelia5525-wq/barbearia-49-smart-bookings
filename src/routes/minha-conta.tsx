@@ -48,6 +48,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { logoEmblema } from "@/components/site/services";
 
 export const Route = createFileRoute("/minha-conta")({
   head: () => ({
@@ -83,10 +84,14 @@ function ClientArea() {
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#090A0F]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link to="/" className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-xl gold-gradient-bg text-black font-display font-black text-lg shadow-lg shadow-amber-500/20">
-              49
-            </span>
+          <Link to="/" className="flex items-center gap-3">
+            <div className="relative flex items-center justify-center h-10 w-10 rounded-xl bg-black/80 border border-amber-500/40 shadow-lg shadow-amber-500/20 overflow-hidden p-1">
+              <img
+                src={logoEmblema}
+                alt="Logo Barbearia 49"
+                className="h-full w-full object-contain"
+              />
+            </div>
             <span className="font-display font-bold text-base tracking-tight text-white">
               Barbearia <span className="text-primary">49</span>
             </span>

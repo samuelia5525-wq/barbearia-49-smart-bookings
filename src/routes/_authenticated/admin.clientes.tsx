@@ -19,6 +19,12 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  getAdminClientsFn,
+  getAdminClientHistoryFn,
+  adjustAdminLoyaltyFn,
+  saveAdminClientPreferencesFn,
+} from "@/lib/admin.functions";
+import {
   formatBRL,
   formatDateLong,
   formatDateShort,
@@ -74,24 +80,13 @@ function ClientesPage() {
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["admin-clients-full"],
     queryFn: async () => {
-      const [{ data: profs, error: profsErr }, { data: loys }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id,name,nickname,phone,preferences,created_at")
-          .eq("role", "client")
-          .order("name", { ascending: true }),
-        supabase.from("loyalty").select("client_id,points,total_cuts,free_used"),
-      ]);
-      if (profsErr) throw profsErr;
-
-      const loyaltyMap = new Map((loys ?? []).map((l) => [l.client_id, l]));
-
-      return (profs ?? []).map((p) => ({
-        ...p,
-        loyalty: loyaltyMap.get(p.id) ?? { points: 0, total_cuts: 0, free_used: 0 },
-      })) as ClientProfile[];
+      try {
+        return (await getAdminClientsFn()) as ClientProfile[];
+      } catch {
+        return [] as ClientProfile[];
+      }
     },
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
   });
 
   // Client history when modal is open
@@ -99,13 +94,11 @@ function ClientesPage() {
     queryKey: ["admin-client-history", selectedClient?.id],
     enabled: !!selectedClient,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("appointments")
-        .select("id,service_name,starts_at,status,price,is_free")
-        .eq("client_id", selectedClient!.id)
-        .order("starts_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []).map((a) => ({ ...a, price: Number(a.price) })) as AppointmentItem[];
+      try {
+        return (await getAdminClientHistoryFn({ data: { clientId: selectedClient!.id } })) as AppointmentItem[];
+      } catch {
+        return [] as AppointmentItem[];
+      }
     },
   });
 
@@ -134,10 +127,8 @@ function ClientesPage() {
     const newPoints = Math.max(0, currentPoints + delta);
 
     try {
-      const { error } = await supabase
-        .from("loyalty")
-        .upsert({ client_id: clientId, points: newPoints, updated_at: new Date().toISOString() });
-      if (error) throw error;
+      const res = await adjustAdminLoyaltyFn({ data: { clientId, points: newPoints } });
+      if (!res.ok) throw new Error("Erro ao atualizar");
       toast.success(`Fidelidade atualizada: ${newPoints} pontos.`);
       qc.invalidateQueries({ queryKey: ["admin-clients-full"] });
       if (selectedClient && selectedClient.id === clientId) {
@@ -162,13 +153,10 @@ function ClientesPage() {
     const newFreeUsed = (client.loyalty?.free_used ?? 0) + 1;
 
     try {
-      const { error } = await supabase.from("loyalty").upsert({
-        client_id: clientId,
-        points: newPoints,
-        free_used: newFreeUsed,
-        updated_at: new Date().toISOString(),
+      const res = await adjustAdminLoyaltyFn({
+        data: { clientId, points: newPoints, freeUsed: newFreeUsed },
       });
-      if (error) throw error;
+      if (!res.ok) throw new Error("Erro ao resgatar");
       toast.success("Corte grátis resgatado!");
       qc.invalidateQueries({ queryKey: ["admin-clients-full"] });
       if (selectedClient && selectedClient.id === clientId) {
@@ -191,11 +179,10 @@ function ClientesPage() {
     if (!selectedClient) return;
     setSavingPrefs(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ preferences: prefsText.trim() || null })
-        .eq("id", selectedClient.id);
-      if (error) throw error;
+      const res = await saveAdminClientPreferencesFn({
+        data: { clientId: selectedClient.id, preferences: prefsText.trim() || null },
+      });
+      if (!res.ok) throw new Error("Erro ao salvar");
       toast.success("Preferências salvas com sucesso!");
       qc.invalidateQueries({ queryKey: ["admin-clients-full"] });
     } catch {

@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { getAdminAppointmentsFn } from "./admin.functions";
 
 export type AdminAppt = {
   id: string;
@@ -14,14 +14,13 @@ export type AdminAppt = {
 };
 
 export async function fetchAppointments(fromIso: string, toIso: string) {
-  const { data, error } = await supabase
-    .from("appointments")
-    .select("id,service_name,starts_at,ends_at,status,price,is_free,client_id,created_at,profiles(name,nickname,phone,preferences)")
-    .gte("starts_at", fromIso)
-    .lt("starts_at", toIso)
-    .order("starts_at");
-  if (error) throw error;
-  return (data ?? []).map((a) => ({ ...a, price: Number(a.price) })) as AdminAppt[];
+  try {
+    const list = await getAdminAppointmentsFn({ data: { from: fromIso, to: toIso } });
+    return (list ?? []).map((a) => ({ ...a, price: Number(a.price) })) as AdminAppt[];
+  } catch (err) {
+    console.error("Erro ao carregar agendamentos do servidor:", err);
+    return [] as AdminAppt[];
+  }
 }
 
 export const STATUS_LABEL: Record<string, string> = {
